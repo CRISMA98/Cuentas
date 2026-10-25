@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gestor Pro Streaming</title>
+  
+  <!-- Configuración PWA / Móvil -->
+  <meta name="theme-color" content="#0b1120">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StreamManager">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><polygon points='38,28 72,50 38,72' fill='%23ffffff'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><polygon points='38,28 72,50 38,72' fill='%23ffffff'/></svg>">
+
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #1e293b;
+      --card-muted: #162032;
+      --border: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --whatsapp: #22c55e;
+      --whatsapp-hover: #16a34a;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 18px; line-height: 1.5; }
+    .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    
+    header { 
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; 
+      gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; 
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .stat-card span { font-size: 0.8rem; color: var(--text-muted); }
+    .stat-card strong { display: block; font-size: 1.4rem; margin-top: 4px; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; color: #fff; }
+
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+    .input-group { display: flex; flex-direction: column; gap: 4px; }
+    .input-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    input, select, textarea {
+      background: var(--card-muted); border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px 12px; color: #fff; font-size: 0.88rem; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+
+    .btn {
+      background: var(--primary); color: #fff; border: none; border-radius: 6px;
+      padding: 8px 14px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #334155; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-renew { background: #059669; padding: 5px 9px; font-size: 0.75rem; }
+    .btn-renew:hover { background: #047857; }
+    .btn-danger { background: var(--danger); padding: 5px 9px; font-size: 0.75rem; }
+    .btn-info { background: #475569; padding: 5px 9px; font-size: 0.75rem; }
+    .btn-sheets { background: #0f766e; }
+    .btn-sheets:hover { background: #115e59; }
+    .btn-whatsapp { background: var(--whatsapp); color: #042f14; font-weight: 700; width: 100%; }
+    .btn-whatsapp:hover { background: var(--whatsapp-hover); color: #fff; }
+
+    .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .filter-bar input { flex: 1; min-width: 220px; }
+    .filter-bar select { min-width: 150px; }
+
+    .table-container { overflow-x: auto; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.84rem; }
+    th { background: var(--card-muted); padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+    tr:hover { background: #26354a; }
+
+    .badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.74rem; font-weight: 600; display: inline-block; }
+    .badge-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+    /* Modales */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; max-width: 560px; width: 100%; padding: 20px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-weight: 700; font-size: 1.1rem; }
+    .modal-close { cursor: pointer; color: var(--text-muted); font-size: 1.4rem; line-height: 1; }
+    .cred-box { background: var(--card-muted); padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin: 10px 0; font-family: monospace; font-size: 0.85rem; line-height: 1.6; }
+    .template-selector { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Pantalla de Bloqueo PIN */
+    #lockScreen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .lock-box {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      max-width: 360px; width: 100%; padding: 28px; text-align: center;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Pantalla de Bloqueo por PIN -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div style="font-size: 2.2rem;">🔒</div>
+    <h2 style="font-size: 1.3rem;">Acceso Protegido</h2>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">Ingresa el PIN de seguridad (PIN inicial: <strong>1234</strong>)</p>
+    <input type="password" id="inputPinAcceso" maxlength="8" placeholder="••••" style="text-align: center; font-size: 1.5rem; letter-spacing: 6px;">
+    <button class="btn" onclick="verificarPin()">Desbloquear Panel</button>
+  </div>
+</div>
+
+<div class="container" id="mainApp" style="display: none;">
+  <header>
+    <h1>Gestor de Streaming</h1>
+    <div class="header-actions">
+      <input type="file" id="importInput" accept=".json" style="display: none;" onchange="procesarArchivoBackup(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('importInput').click()">📥 Importar JSON</button>
+      <button class="btn btn-secondary" onclick="exportarBackup()">📤 Exportar JSON</button>
+      <button class="btn btn-secondary" onclick="exportarCSV()">📊 Excel (CSV)</button>
+      <button class="btn btn-sheets" onclick="abrirConfigSheets()">☁️ Google Sheets</button>
+      <button class="btn btn-secondary" onclick="cambiarPinSeguridad()">🔑 Cambiar PIN</button>
+      <button class="btn btn-danger" onclick="bloquearPantalla()">🔒 Bloquear</button>
+    </div>
+  </header>
+
+  <!-- Métricas Rápidas -->
+  <div class="stats-grid">
+    <div class="stat-card"><span>Total Registros</span><strong id="statTotal">0</strong></div>
+    <div class="stat-card"><span>Vencen en ≤ 3 días / Vencidas</span><strong id="statPorVencer" style="color: var(--warning)">0</strong></div>
+    <div class="stat-card"><span>Ganancia Acumulada</span><strong id="statGanancia">$0.00</strong></div>
+  </div>
+
+  <!-- Formulario de Registro -->
+  <div class="card">
+    <div class="card-title">Registrar Nueva Venta</div>
+    <form id="ventaForm">
+      <div class="input-group">
+        <label>Nombre del Cliente</label>
+        <input type="text" id="cliente" required placeholder="Ej. Carlos López">
+      </div>
+      <div class="input-group">
+        <label>WhatsApp (con código de país)</label>
+        <input type="text" id="whatsapp" required placeholder="Ej. 521234567890">
+      </div>
+      <div class="input-group">
+        <label>Servicio</label>
+        <input type="text" id="servicio" required placeholder="Ej. Netflix, Spotify, Max">
+      </div>
+      <div class="input-group">
+        <label>Tipo de Cuenta</label>
+        <input type="text" id="tipoCuenta" required placeholder="Ej. Pantalla, Cuenta Completa">
+      </div>
+      <div class="input-group">
+        <label>Duración (Días)</label>
+        <input type="number" id="duracion" value="30" required oninput="calcularVencimiento()">
+      </div>
+      <div class="input-group">
+        <label>Precio Venta ($)</label>
+        <input type="number" step="0.01" id="precioVenta" required placeholder="0.00">
+      </div>
+      <div class="input-group">
+        <label>Costo ($)</label>
+        <input type="number" step="0.01" id="costo" required placeholder="0.00">
+      </div>
+      <div class="input-group">
+        <label>Método de Pago</label>
+        <input type="text" id="metodoPago" required placeholder="Ej. Transferencia, Nequi, Oxxo">
+      </div>
+      <div class="input-group">
+        <label>Estado del Pedido</label>
+        <select id="estadoPedido">
+          <option value="Activo">Activo</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Fecha de Venta</label>
+        <input type="date" id="fechaVenta" required>
+      </div>
+      <div class="input-group">
+        <label>Fecha de Compra de Cuenta</label>
+        <input type="date" id="fechaCompra" required oninput="calcularVencimiento()">
+      </div>
+      <div class="input-group">
+        <label>Fecha de Vencimiento</label>
+        <input type="date" id="fechaVencimiento" required>
+      </div>
+      <div class="input-group">
+        <label>Correo de Plataforma</label>
+        <input type="email" id="correoPlataforma" required placeholder="cuenta@streaming.com">
+      </div>
+      <div class="input-group">
+        <label>Contraseña</label>
+        <input type="text" id="contrasena" required placeholder="Contraseña de la cuenta">
+      </div>
+      <div class="input-group">
+        <label>PIN (Opcional)</label>
+        <input type="text" id="pin" placeholder="PIN de perfil">
+      </div>
+      <div class="input-group">
+        <label>Nombre de Perfil (Opcional)</label>
+        <input type="text" id="nombrePerfil" placeholder="Ej. Perfil 2">
+      </div>
+      <div class="input-group full">
+        <label>Notas / Referencias</label>
+        <textarea id="notas" rows="2" placeholder="Detalles de renovación, proveedor, etc."></textarea>
+      </div>
+      <div class="input-group full">
+        <button type="submit" class="btn">Guardar Venta</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de Cuentas con Filtro -->
+  <div class="card">
+    <div class="card-title">Listado de Cuentas</div>
+    <div class="filter-bar">
+      <input type="text" id="buscador" placeholder="🔍 Buscar por cliente, WhatsApp, servicio o notas..." oninput="actualizarVista()">
+      <select id="filtroEstado" onchange="actualizarVista()">
+        <option value="todos">Todos los Estados</option>
+        <option value="Activo">Activos</option>
+        <option value="Pendiente">Pendientes</option>
+        <option value="Cancelado">Cancelados</option>
+      </select>
+      <select id="filtroVencimiento" onchange="actualizarVista()">
+        <option value="todos">Todas las Fechas</option>
+        <option value="porVencer">Por vencer (≤ 3 días)</option>
+        <option value="vencidas">Ya vencidas</option>
+      </select>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>WhatsApp</th>
+            <th>Servicio</th>
+            <th>Tipo</th>
+            <th>Vencimiento</th>
+            <th>Estado</th>
+            <th>Ganancia</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaCuentas"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Credenciales y WhatsApp -->
+<div class="modal" id="modalDetalle">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="modalTitulo">Detalle de Acceso</span>
+      <span class="modal-close" onclick="cerrarModal('modalDetalle')">&times;</span>
+    </div>
+    <div id="modalCuerpo"></div>
+  </div>
+</div>
+
+<!-- Modal Google Sheets -->
+<div class="modal" id="modalSheets">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>Sincronización con Google Sheets</span>
+      <span class="modal-close" onclick="cerrarModal('modalSheets')">&times;</span>
+    </div>
+    <div style="font-size:0.85rem; line-height:1.6; display:flex; flex-direction:column; gap:12px;">
+      <p style="color:var(--text-muted)">Pega la URL de tu Web App de Google Apps Script para respaldar tus datos en la nube:</p>
+      <input type="text" id="sheetsWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-sheets" style="flex:1;" onclick="sincronizarConSheets()">☁️ Sincronizar Ahora</button>
+        <button class="btn btn-secondary" onclick="guardarUrlSheets()">Guardar URL</button>
+      </div>
+      <p id="sheetsStatus" style="font-size: 0.8rem; font-weight:600;"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let registros = JSON.parse(localStorage.getItem('ventas_streaming') || '[]');
+  let pinActual = localStorage.getItem('pin_seguridad') || '1234';
+  let cuentaSeleccionada = null;
+
+  // Registro PWA dinámico
+  if ('serviceWorker' in navigator) {
+    const swCode = "self.addEventListener('fetch', (e) => {});";
+    const blob = new Blob([swCode], { type: 'text/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  }
+
+  function verificarPin() {
+    const entered = document.getElementById('inputPinAcceso').value;
+    if (entered === pinActual) {
+      document.getElementById('lockScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'flex';
+      document.getElementById('inputPinAcceso').value = '';
+    } else {
+      alert("❌ PIN Incorrecto");
+      document.getElementById('inputPinAcceso').value = '';
+    }
+  }
+
+  document.getElementById('inputPinAcceso').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') verificarPin();
+  });
+
+  function bloquearPantalla() {
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('lockScreen').style.display = 'flex';
+  }
+
+  function cambiarPinSeguridad() {
+    const actual = prompt("Ingresa el PIN actual:");
+    if (actual !== pinActual) {
+      alert("PIN incorrecto.");
+      return;
+    }
+    const nuevo = prompt("Ingresa tu nuevo PIN numérico:");
+    if (nuevo && nuevo.trim().length >= 4) {
+      pinActual = nuevo.trim();
+      localStorage.setItem('pin_seguridad', pinActual);
+      alert("✅ PIN actualizado correctamente.");
+    } else {
+      alert("El PIN debe tener al menos 4 caracteres.");
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaVenta').value = hoy;
+    document.getElementById('fechaCompra').value = hoy;
+    calcularVencimiento();
+    actualizarVista();
+  });
+
+  function calcularVencimiento() {
+    const fCompraStr = document.getElementById('fechaCompra').value;
+    const duracion = parseInt(document.getElementById('duracion').value) || 0;
+    if (fCompraStr) {
+      const fCompra = new Date(fCompraStr + 'T00:00:00');
+      fCompra.setDate(fCompra.getDate() + duracion);
+      document.getElementById('fechaVencimiento').value = fCompra.toISOString().split('T')[0];
+    }
+  }
+
+  document.getElementById('ventaForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pVenta = parseFloat(document.getElementById('precioVenta').value) || 0;
+    const costo = parseFloat(document.getElementById('costo').value) || 0;
+
+    const nuevaVenta = {
+      id: Date.now(),
+      cliente: document.getElementById('cliente').value.trim(),
+      whatsapp: document.getElementById('whatsapp').value.trim(),
+      servicio: document.getElementById('servicio').value.trim(),
+      tipoCuenta: document.getElementById('tipoCuenta').value.trim(),
+      duracion: parseInt(document.getElementById('duracion').value),
+      precioVenta: pVenta,
+      costo: costo,
+      ganancia: pVenta - costo,
+      metodoPago: document.getElementById('metodoPago').value.trim(),
+      estadoPedido: document.getElementById('estadoPedido').value,
+      fechaVenta: document.getElementById('fechaVenta').value,
+      fechaCompra: document.getElementById('fechaCompra').value,
+      fechaVencimiento: document.getElementById('fechaVencimiento').value,
+      correoPlataforma: document.getElementById('correoPlataforma').value.trim(),
+      contrasena: document.getElementById('contrasena').value.trim(),
+      pin: document.getElementById('pin').value.trim(),
+      nombrePerfil: document.getElementById('nombrePerfil').value.trim(),
+      notas: document.getElementById('notas').value.trim()
+    };
+
+    registros.push(nuevaVenta);
+    guardarEnStorage();
+    actualizarVista();
+    e.target.reset();
+    
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaVenta').value = hoy;
+    document.getElementById('fechaCompra').value = hoy;
+    document.getElementById('duracion').value = 30;
+    calcularVencimiento();
+  });
+
+  function guardarEnStorage() {
+    localStorage.setItem('ventas_streaming', JSON.stringify(registros));
+  }
+
+  function renovarCuentaRapido(id) {
+    const cuenta = registros.find(r => r.id === id);
+    if (!cuenta) return;
+
+    const dias = cuenta.duracion || 30;
+    if (!confirm(`¿Renovar "${cuenta.cliente}" (${cuenta.servicio}) por ${dias} días adicionales?`)) return;
+
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const fVencActual = new Date(cuenta.fechaVencimiento + 'T00:00:00');
+
+    let base = (fVencActual < hoy) ? hoy : fVencActual;
+    const nuevaFecha = new Date(base);
+    nuevaFecha.setDate(nuevaFecha.getDate() + dias);
+
+    cuenta.fechaVencimiento = nuevaFecha.toISOString().split('T')[0];
+    cuenta.fechaVenta = hoy.toISOString().split('T')[0];
+    cuenta.estadoPedido = 'Activo';
+
+    guardarEnStorage();
+    actualizarVista();
+    alert(`✅ Renovación aplicada hasta el ${cuenta.fechaVencimiento}`);
+  }
+
+  function eliminarRegistro(id) {
+    if (confirm('¿Deseas eliminar este registro de venta?')) {
+      registros = registros.filter(r => r.id !== id);
+      guardarEnStorage();
+      actualizarVista();
+    }
+  }
+
+  function actualizarVista() {
+    const tbody = document.getElementById('tablaCuentas');
+    tbody.innerHTML = '';
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    const busqueda = document.getElementById('buscador').value.toLowerCase();
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const filtroVenc = document.getElementById('filtroVencimiento').value;
+
+    let porVencerCount = 0;
+    let gananciaTotal = 0;
+
+    const registrosFiltrados = registros.filter(item => {
+      gananciaTotal += item.ganancia;
+
+      const fVenc = new Date(item.fechaVencimiento + 'T00:00:00');
+      const diffDias = Math.ceil((fVenc - hoy) / (1000 * 60 * 60 * 24));
+
+      if (item.estadoPedido !== 'Cancelado' && diffDias <= 3) {
+        porVencerCount++;
+      }
+
+      const matchTexto = 
+        item.cliente.toLowerCase().includes(busqueda) ||
+        item.whatsapp.toLowerCase().includes(busqueda) ||
+        item.servicio.toLowerCase().includes(busqueda) ||
+        (item.notas && item.notas.toLowerCase().includes(busqueda));
+
+      const matchEstado = (filtroEstado === 'todos') || (item.estadoPedido === filtroEstado);
+
+      let matchVenc = true;
+      if (filtroVenc === 'porVencer') matchVenc = diffDias >= 0 && diffDias <= 3;
+      if (filtroVenc === 'vencidas') matchVenc = diffDias < 0;
+
+      return matchTexto && matchEstado && matchVenc;
+    });
+
+    registrosFiltrados.forEach(item => {
+      const fVenc = new Date(item.fechaVencimiento + 'T00:00:00');
+      const diffDias = Math.ceil((fVenc - hoy) / (1000 * 60 * 60 * 24));
+
+      let badgeVencimiento = `<span class="badge badge-ok">${item.fechaVencimiento} (${diffDias}d)</span>`;
+      if (diffDias < 0) {
+        badgeVencimiento = `<span class="badge badge-danger">Vencido hace ${Math.abs(diffDias)}d</span>`;
+      } else if (diffDias === 0) {
+        badgeVencimiento = `<span class="badge badge-danger">¡Vence HOY!</span>`;
+      } else if (diffDias <= 3) {
+        badgeVencimiento = `<span class="badge badge-warn">Vence en ${diffDias}d</span>`;
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${item.cliente}</strong></td>
+        <td>${item.whatsapp}</td>
+        <td>${item.servicio}</td>
+        <td>${item.tipoCuenta}</td>
+        <td>${badgeVencimiento}</td>
+        <td><span class="badge ${item.estadoPedido === 'Activo' ? 'badge-ok' : (item.estadoPedido === 'Pendiente' ? 'badge-warn' : 'badge-danger')}">${item.estadoPedido}</span></td>
+        <td>$${item.ganancia.toFixed(2)}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-renew" title="Renovar por otro periodo" onclick="renovarCuentaRapido(${item.id})">🔄 Renovar</button>
+          <button class="btn btn-info" onclick="verDetalles(${item.id})">Ver / WA</button>
+          <button class="btn btn-danger" onclick="eliminarRegistro(${item.id})">✕</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('statTotal').textContent = registros.length;
+    document.getElementById('statPorVencer').textContent = porVencerCount;
+    document.getElementById('statGanancia').textContent = `$${gananciaTotal.toFixed(2)}`;
+  }
+
+  function verDetalles(id) {
+    cuentaSeleccionada = registros.find(r => r.id === id);
+    if (!cuentaSeleccionada) return;
+
+    document.getElementById('modalTitulo').textContent = `${cuentaSeleccionada.servicio} - ${cuentaSeleccionada.cliente}`;
+    
+    document.getElementById('modalCuerpo').innerHTML = `
+      <div style="font-size: 0.85rem; line-height: 1.6;">
+        <p><strong>Tipo:</strong> ${cuentaSeleccionada.tipoCuenta} | <strong>Duración:</strong> ${cuentaSeleccionada.duracion} días</p>
+        <p><strong>Pago:</strong> ${cuentaSeleccionada.metodoPago} | <strong>Precio:</strong> $${cuentaSeleccionada.precioVenta.toFixed(2)} | <strong>Vence:</strong> ${cuentaSeleccionada.fechaVencimiento}</p>
+      </div>
+
+      <div class="cred-box">
+        <strong>Credenciales de acceso:</strong><br>
+        📧 Correo: ${cuentaSeleccionada.correoPlataforma}<br>
+        🔑 Contraseña: ${cuentaSeleccionada.contrasena}<br>
+        🔢 PIN: ${cuentaSeleccionada.pin || 'N/A'}<br>
+        👤 Perfil: ${cuentaSeleccionada.nombrePerfil || 'N/A'}
+      </div>
+
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 8px;"><strong>Notas:</strong> ${cuentaSeleccionada.notas || 'Ninguna'}</p>
+
+      <div class="template-selector">
+        <label><strong>Plantilla de mensaje WhatsApp:</strong></label>
+        <select id="tipoMensajeWA" onchange="actualizarTextoWA()">
+          <option value="entrega">Entrega de datos / Bienvenida</option>
+          <option value="cobro">Recordatorio de renovación / Cobro</option>
+        </select>
+        <textarea id="textoMensajeWA" rows="5"></textarea>
+        <button class="btn btn-whatsapp" onclick="enviarWhatsApp()">📲 Abrir en WhatsApp</button>
+      </div>
+    `;
+
+    actualizarTextoWA();
+    document.getElementById('modalDetalle').style.display = 'flex';
+  }
+
+  function actualizarTextoWA() {
+    if (!cuentaSeleccionada) return;
+    const tipo = document.getElementById('tipoMensajeWA').value;
+    let mensaje = "";
+
+    if (tipo === "entrega") {
+      mensaje = `¡Hola ${cuentaSeleccionada.cliente}! 👋 Te hago entrega de tu cuenta de *${cuentaSeleccionada.servicio}*:\n\n` +
+        `📧 *Correo:* ${cuentaSeleccionada.correoPlataforma}\n` +
+        `🔑 *Contraseña:* ${cuentaSeleccionada.contrasena}\n` +
+        (cuentaSeleccionada.nombrePerfil ? `👤 *Perfil:* ${cuentaSeleccionada.nombrePerfil}\n` : '') +
+        (cuentaSeleccionada.pin ? `🔢 *PIN:* ${cuentaSeleccionada.pin}\n` : '') +
+        `📅 *Vencimiento:* ${cuentaSeleccionada.fechaVencimiento}\n\n` +
+        `¡Gracias por tu compra! Quedo a tu disposición por cualquier consulta.`;
+    } else {
+      mensaje = `Hola ${cuentaSeleccionada.cliente} 👋 Te saludo para recordarte que tu servicio de *${cuentaSeleccionada.servicio}* está próximo a vencer el día *${cuentaSeleccionada.fechaVencimiento}*.\n\n` +
+        `💰 *Monto de renovación:* $${cuentaSeleccionada.precioVenta.toFixed(2)}\n` +
+        `💳 *Método de pago habitual:* ${cuentaSeleccionada.metodoPago}\n\n` +
+        `¿Deseas renovar el servicio por otro periodo?`;
+    }
+
+    document.getElementById('textoMensajeWA').value = mensaje;
+  }
+
+  function enviarWhatsApp() {
+    if (!cuentaSeleccionada) return;
+    const numeroLimpio = cuentaSeleccionada.whatsapp.replace(/\D/g, '');
+    const mensaje = encodeURIComponent(document.getElementById('textoMensajeWA').value);
+    window.open(`https://wa.me/${numeroLimpio}?text=${mensaje}`, '_blank');
+  }
+
+  function cerrarModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+  }
+
+  function exportarBackup() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(registros, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `respaldo_streaming_${new Date().toISOString().split('T')[0]}.json`);
+    dlAnchor.click();
+  }
+
+  function exportarCSV() {
+    if (registros.length === 0) {
+      alert("No hay registros para exportar.");
+      return;
+    }
+
+    const headers = [
+      "ID", "Cliente", "WhatsApp", "Servicio", "Tipo de Cuenta", "Duracion (dias)",
+      "Precio Venta", "Costo", "Ganancia", "Metodo Pago", "Estado",
+      "Fecha Venta", "Fecha Compra", "Fecha Vencimiento",
+      "Correo Plataforma", "Contrasena", "PIN", "Perfil", "Notas"
+    ];
+
+    const escapeCSV = (texto) => {
+      if (texto === null || texto === undefined) return '""';
+      const str = String(texto).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    let csvContent = "\uFEFF" + headers.join(",") + "\n";
+
+    registros.forEach(r => {
+      const fila = [
+        r.id, escapeCSV(r.cliente), escapeCSV(r.whatsapp), escapeCSV(r.servicio),
+        escapeCSV(r.tipoCuenta), r.duracion, r.precioVenta, r.costo, r.ganancia,
+        escapeCSV(r.metodoPago), escapeCSV(r.estadoPedido), r.fechaVenta,
+        r.fechaCompra, r.fechaVencimiento, escapeCSV(r.correoPlataforma),
+        escapeCSV(r.contrasena), escapeCSV(r.pin), escapeCSV(r.nombrePerfil), escapeCSV(r.notas)
+      ];
+      csvContent += fila.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function procesarArchivoBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const datos = JSON.parse(e.target.result);
+        if (!Array.isArray(datos)) {
+          alert("El archivo JSON no tiene un formato válido.");
+          return;
+        }
+
+        const modo = confirm(
+          "¿Deseas FUSIONAR los registros con los actuales?\n\n- 'Aceptar': Une los registros importados sin borrar los actuales.\n- 'Cancelar': REEMPLAZA todos los datos actuales con los del archivo."
+        );
+
+        if (modo) {
+          const idsExistentes = new Set(registros.map(r => r.id));
+          const nuevos = datos.filter(d => !idsExistentes.has(d.id));
+          registros = registros.concat(nuevos);
+        } else {
+          registros = datos;
+        }
+
+        guardarEnStorage();
+        actualizarVista();
+        alert("✅ Respaldo cargado correctamente.");
+      } catch (err) {
+        alert("Error al leer el archivo JSON: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  // Integración Google Sheets
+  function abrirConfigSheets() {
+    document.getElementById('sheetsWebhookUrl').value = localStorage.getItem('sheets_webhook_url') || '';
+    document.getElementById('sheetsStatus').textContent = '';
+    document.getElementById('modalSheets').style.display = 'flex';
+  }
+
+  function guardarUrlSheets() {
+    const url = document.getElementById('sheetsWebhookUrl').value.trim();
+    localStorage.setItem('sheets_webhook_url', url);
+    alert("URL guardada localmente.");
+  }
+
+  async function sincronizarConSheets() {
+    const url = document.getElementById('sheetsWebhookUrl').value.trim();
+    const status = document.getElementById('sheetsStatus');
+    if (!url) {
+      alert("Por favor ingresa la URL del Web App de Apps Script.");
+      return;
+    }
+
+    status.style.color = "var(--warning)";
+    status.textContent = "⏳ Enviando datos a Google Sheets...";
+
+    try {
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registros)
+      });
+      status.style.color = "var(--success)";
+      status.textContent = "✅ Petición enviada exitosamente a Google Sheets.";
+    } catch (e) {
+      status.style.color = "var(--danger)";
+      status.textContent = "❌ Error al enviar datos: " + e.message;
+    }
+  }
+</script>
+
+</body>
+</html>
